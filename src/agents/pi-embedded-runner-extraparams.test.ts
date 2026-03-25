@@ -2469,7 +2469,7 @@ describe("applyExtraParamsToAgent", () => {
     },
   );
 
-  it("strips prompt cache fields for non-OpenAI openai-responses endpoints", () => {
+  it("injects session prompt cache key for custom openai-responses endpoints", () => {
     const payload = runResponsesPayloadMutationCase({
       applyProvider: "custom-proxy",
       applyModelId: "some-model",
@@ -2481,15 +2481,17 @@ describe("applyExtraParamsToAgent", () => {
       } as unknown as Model<"openai-responses">,
       payload: {
         store: false,
-        prompt_cache_key: "session-xyz",
         prompt_cache_retention: "24h",
       },
+      extraParamsOverride: {
+        sessionPromptCacheKey: "session-xyz",
+      },
     });
-    expect(payload).not.toHaveProperty("prompt_cache_key");
-    expect(payload).not.toHaveProperty("prompt_cache_retention");
+    expect(payload.prompt_cache_key).toBe("session-xyz");
+    expect(payload.prompt_cache_retention).toBe("24h");
   });
 
-  it("keeps prompt cache fields for direct OpenAI openai-responses endpoints", () => {
+  it("injects session prompt cache key for direct OpenAI openai-responses endpoints", () => {
     const payload = runResponsesPayloadMutationCase({
       applyProvider: "openai",
       applyModelId: "gpt-5",
@@ -2501,15 +2503,15 @@ describe("applyExtraParamsToAgent", () => {
       } as unknown as Model<"openai-responses">,
       payload: {
         store: false,
-        prompt_cache_key: "session-123",
-        prompt_cache_retention: "24h",
+      },
+      extraParamsOverride: {
+        sessionPromptCacheKey: "session-123",
       },
     });
     expect(payload.prompt_cache_key).toBe("session-123");
-    expect(payload.prompt_cache_retention).toBe("24h");
   });
 
-  it("keeps prompt cache fields for direct Azure OpenAI openai-responses endpoints", () => {
+  it("injects session prompt cache key for direct Azure OpenAI openai-responses endpoints", () => {
     const payload = runResponsesPayloadMutationCase({
       applyProvider: "azure-openai-responses",
       applyModelId: "gpt-4o",
@@ -2521,12 +2523,12 @@ describe("applyExtraParamsToAgent", () => {
       } as unknown as Model<"openai-responses">,
       payload: {
         store: false,
-        prompt_cache_key: "session-azure",
-        prompt_cache_retention: "24h",
+      },
+      extraParamsOverride: {
+        sessionPromptCacheKey: "session-azure",
       },
     });
     expect(payload.prompt_cache_key).toBe("session-azure");
-    expect(payload.prompt_cache_retention).toBe("24h");
   });
 
   it("keeps prompt cache fields when openai-responses baseUrl is omitted", () => {
@@ -2546,5 +2548,67 @@ describe("applyExtraParamsToAgent", () => {
     });
     expect(payload.prompt_cache_key).toBe("session-default");
     expect(payload.prompt_cache_retention).toBe("24h");
+  });
+
+  it("preserves payload prompt_cache_key over the session fallback key", () => {
+    const payload = runResponsesPayloadMutationCase({
+      applyProvider: "custom-proxy",
+      applyModelId: "some-model",
+      model: {
+        api: "openai-responses",
+        provider: "custom-proxy",
+        id: "some-model",
+        baseUrl: "https://my-proxy.example.com/v1",
+      } as unknown as Model<"openai-responses">,
+      payload: {
+        store: false,
+        prompt_cache_key: "payload-key",
+      },
+      extraParamsOverride: {
+        sessionPromptCacheKey: "session-key",
+      },
+    });
+    expect(payload.prompt_cache_key).toBe("payload-key");
+  });
+
+  it("prefers explicit extra param prompt cache key over the session fallback key", () => {
+    const payload = runResponsesPayloadMutationCase({
+      applyProvider: "custom-proxy",
+      applyModelId: "some-model",
+      model: {
+        api: "openai-responses",
+        provider: "custom-proxy",
+        id: "some-model",
+        baseUrl: "https://my-proxy.example.com/v1",
+      } as unknown as Model<"openai-responses">,
+      payload: {
+        store: false,
+      },
+      extraParamsOverride: {
+        promptCacheKey: "explicit-key",
+        sessionPromptCacheKey: "session-key",
+      },
+    });
+    expect(payload.prompt_cache_key).toBe("explicit-key");
+  });
+
+  it("does not inject prompt cache fields for non-Responses APIs", () => {
+    const payload = runResponsesPayloadMutationCase({
+      applyProvider: "openai",
+      applyModelId: "gpt-5",
+      model: {
+        api: "openai-completions",
+        provider: "openai",
+        id: "gpt-5",
+        baseUrl: "https://api.openai.com/v1",
+      } as unknown as Model<"openai-completions">,
+      payload: {
+        temperature: 0.1,
+      },
+      extraParamsOverride: {
+        sessionPromptCacheKey: "session-123",
+      },
+    });
+    expect(payload).not.toHaveProperty("prompt_cache_key");
   });
 });

@@ -2295,6 +2295,7 @@ export async function runEmbeddedAttempt(
         {
           ...params.streamParams,
           fastMode: params.fastMode,
+          sessionPromptCacheKey: params.sessionId,
         },
         params.thinkLevel,
         sessionAgentId,

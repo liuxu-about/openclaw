@@ -1221,6 +1221,42 @@ describe("createOpenAIWebSocketStreamFn", () => {
     expect(sent.tool_choice).toBe("auto");
   });
 
+  it("applies onPayload prompt_cache_key mutations to response.create", async () => {
+    const streamFn = createOpenAIWebSocketStreamFn("sk-test", "sess-prompt-cache");
+    const stream = streamFn(
+      modelStub as Parameters<typeof streamFn>[0],
+      contextStub as Parameters<typeof streamFn>[1],
+      {
+        onPayload: (payload) => {
+          if (payload && typeof payload === "object") {
+            (payload as Record<string, unknown>).prompt_cache_key = "session-123";
+          }
+          return payload;
+        },
+      } as unknown as Parameters<typeof streamFn>[2],
+    );
+    await new Promise<void>((resolve, reject) => {
+      queueMicrotask(async () => {
+        try {
+          await new Promise((r) => setImmediate(r));
+          MockManager.lastInstance!.simulateEvent({
+            type: "response.completed",
+            response: makeResponseObject("resp-prompt-cache", "Done"),
+          });
+          for await (const _ of await resolveStream(stream)) {
+            /* consume */
+          }
+          resolve();
+        } catch (e) {
+          reject(e);
+        }
+      });
+    });
+    const sent = MockManager.lastInstance!.sentEvents[0] as Record<string, unknown>;
+    expect(sent.type).toBe("response.create");
+    expect(sent.prompt_cache_key).toBe("session-123");
+  });
+
   it("rejects promise when WebSocket drops mid-request", async () => {
     const streamFn = createOpenAIWebSocketStreamFn("sk-test", "sess-drop");
     const stream = streamFn(
