@@ -29,7 +29,11 @@ import type { OpenClawConfig } from "../../config/config.js";
 import type { LineProbeResult } from "../../plugin-sdk/line.js";
 import { clearPluginDiscoveryCache } from "../../plugins/discovery.js";
 import { clearPluginManifestRegistryCache } from "../../plugins/manifest-registry.js";
-import { setActivePluginRegistry } from "../../plugins/runtime.js";
+import {
+  pinActivePluginChannelRegistry,
+  releasePinnedPluginChannelRegistry,
+  setActivePluginRegistry,
+} from "../../plugins/runtime.js";
 import {
   createChannelTestPluginBase,
   createMSTeamsTestPluginBase,
@@ -648,6 +652,36 @@ describe("channel plugin loader", () => {
     expect(await loadChannelOutboundAdapter("msteams")).toBe(msteamsOutbound);
     setActivePluginRegistry(registryWithMSTeamsV2);
     expect(await loadChannelOutboundAdapter("msteams")).toBe(msteamsOutboundV2);
+  });
+
+  it("keeps outbound adapters available from the pinned channel registry", async () => {
+    const telegramOutbound: ChannelOutboundAdapter = {
+      deliveryMode: "direct",
+      sendText: async () => ({ channel: "telegram", messageId: "t1" }),
+      sendMedia: async () => ({ channel: "telegram", messageId: "t2" }),
+    };
+    const startupRegistry = createTestRegistry([
+      {
+        pluginId: "telegram",
+        plugin: createOutboundTestPlugin({
+          id: "telegram",
+          label: "Telegram",
+          outbound: telegramOutbound,
+        }),
+        source: "startup",
+      },
+    ]);
+    const replacementRegistry = createTestRegistry([]);
+
+    setActivePluginRegistry(startupRegistry);
+    pinActivePluginChannelRegistry(startupRegistry);
+
+    try {
+      setActivePluginRegistry(replacementRegistry);
+      expect(await loadChannelOutboundAdapter("telegram")).toBe(telegramOutbound);
+    } finally {
+      releasePinnedPluginChannelRegistry(startupRegistry);
+    }
   });
 
   it("returns undefined when plugin has no outbound adapter", async () => {
