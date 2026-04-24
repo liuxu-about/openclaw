@@ -1,0 +1,5 @@
+# Prototype node has no required third party dependencies yet.
+# Production macOS AX integration options:
+# pyobjc-framework-ApplicationServices
+# pyobjc-framework-Quartz
+# pyobjc-framework-Cocoa
