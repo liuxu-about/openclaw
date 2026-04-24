@@ -1,0 +1,47 @@
+{
+  "computer": {
+    "enabled": true,
+    "default_mode": "ax_first",
+    "vision_fallback": "on_demand",
+    "target_window_only": true,
+    "allowed_apps": [
+      "com.apple.finder",
+      "com.apple.Safari",
+      "com.google.Chrome",
+      "com.apple.calculator"
+    ],
+    "blocked_apps": [
+      "com.apple.Terminal",
+      "com.googlecode.iterm2",
+      "com.apple.systempreferences",
+      "com.apple.Passwords",
+      "com.1password.1password",
+      "ai.openclaw.app",
+      "openclaw"
+    ],
+    "approval_required_for": [
+      "send_message",
+      "send_email",
+      "submit_external_form",
+      "delete_file",
+      "overwrite_file",
+      "payment",
+      "purchase",
+      "credential_input",
+      "system_settings",
+      "install_software",
+      "terminal_or_shell"
+    ],
+    "observation": {
+      "max_nodes": 450,
+      "max_children_per_list": 30,
+      "include_screenshot_by_default": false
+    },
+    "audit": {
+      "enabled": true,
+      "store_ax_tree": true,
+      "store_screenshot": "redacted_on_fallback_only",
+      "store_actions": true
+    }
+  }
+}
