@@ -68,9 +68,11 @@ class AxNode:
     id: str | None = None
     path: str | None = None
     stable_key: str | None = None
+    native_handle: Any | None = field(default=None, repr=False, compare=False)
 
     def to_model_dict(self) -> dict[str, Any]:
         data = asdict(self)
+        data.pop("native_handle", None)
         return {key: value for key, value in data.items() if value not in (None, [], False)}
 
 
@@ -171,6 +173,7 @@ def prune_ax_tree(
             actions=node.actions[:],
             children=children,
             path=path,
+            native_handle=node.native_handle,
         )
 
         clean.stable_key = stable_hash(
@@ -214,7 +217,7 @@ def build_demo_tree() -> AxNode:
     )
 
 
-def observe_demo(max_nodes: int = 450) -> dict[str, Any]:
+def observe_demo(max_nodes: int = 450) -> tuple[dict[str, Any], dict[str, Any]]:
     viewport = (0, 0, 1440, 900)
     root, elements = prune_ax_tree(
         build_demo_tree(),
@@ -223,9 +226,9 @@ def observe_demo(max_nodes: int = 450) -> dict[str, Any]:
         window_title="Demo Calculator",
         max_nodes=max_nodes,
     )
-    return {
+    payload = {
         "observation_id": "obs_demo",
-        "source": "ax",
+        "source": "ax_demo",
         "active_app": "Demo Calculator",
         "active_window": "Demo Calculator",
         "screen": {"width": 1440, "height": 900, "scale": 2, "display_id": "main"},
@@ -233,3 +236,5 @@ def observe_demo(max_nodes: int = 450) -> dict[str, Any]:
         "elements": {key: node.to_model_dict() for key, node in elements.items()},
         "fallback_recommended": len(elements) == 0,
     }
+    handles = {key: node.native_handle for key, node in elements.items() if node.native_handle is not None}
+    return payload, handles
